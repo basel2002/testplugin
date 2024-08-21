@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Create Color Palette</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <style>
       body {
         background-color: #1e1e2f;
@@ -79,39 +80,61 @@
 
     <script>
       let selectedFile = null;
-
+    
       // Handle file input change
       document.getElementById('file-upload').onchange = (event) => {
         const file = event.target.files[0];
         if (file) {
-          selectedFile  = file;
-          console.log(selectedFile);
+          selectedFile = file;
           document.getElementById('result').innerText = 'Image Selected: ' + file.name;
         }
       };
+    
+      // Function to get color palette from API
+      const getColorPallette = async (file) => {
+        try {
+          const formData = new FormData();
+          formData.append('image', file);
+    
+          const response = await fetch("http://127.0.0.1:5150/api/process-image", {
+      method: 'POST',
+      body: formData,
+         });
 
+   
+
+    const data = await response.json();
+    return data;
+        } catch (error) {
+          console.error('Error while fetching the color palette:', error);
+          document.getElementById('result').innerText = 'Error: ' + error;
+        }
+      };
+    
       // Handle "Create Color Palette" button click
-      document.getElementById('create-palette').onclick = () => {
+      document.getElementById('create-palette').onclick = async () => {
         if (selectedFile) {
-          const reader = new FileReader();
-          reader.onload = () => {
-            parent.postMessage({ pluginMessage: { type: 'create-palette', data: reader.result } }, '*');
-          };
-          reader.readAsDataURL(selectedFile);
+          const palette = await getColorPallette(selectedFile);
+          if (palette) {
+            document.getElementById('result').innerText = 'Color Palette: ' + palette.join(', ');
+          }
         } else {
           document.getElementById('result').innerText = 'Please select an image first.';
         }
       };
-
+    
       // Handle messages from the plugin code
       window.onmessage = (event) => {
         const message = event.data.pluginMessage;
         if (message.type === 'model-result') {
-          document.getElementById('result').innerText = 'Color Palette: ' + message.data.join(', ');
+          console.log('Deep Learning Model Result:', message.data);
+          alert('Generated Color Palette: ' + message.data.join(', '));
         } else if (message.type === 'error') {
-          document.getElementById('result').innerText = 'Error: ' + message.message;
+          console.error('Error:', message.message);
+          alert('Error: ' + message.message);
         }
       };
     </script>
+  
   </body>
 </html>

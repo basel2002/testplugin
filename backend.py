@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS  # Handle CORS for cross-origin requests
 import numpy as np
 import cv2
 from PIL import Image
@@ -7,21 +8,28 @@ from sklearn.cluster import KMeans
 import random
 import io
 
-# Load your pre-trained U2NET model
+# Initialize Flask app
+app = Flask(__name__)
+CORS(app)  # Enable CORS for the Flask app
+
+# Load the pre-trained U2NET model
 U2NET_MODEL = load_model('C:/Users/smart/Downloads/GP_Materials/ImageRecoloring.h5', compile=False)
 
 def preprocess_image(image, size):
+    """Preprocess the image for the model."""
     img = image.convert('RGB')
     img = img.resize((size, size))
     img_array = np.array(img)
     return np.expand_dims(img_array, axis=0)
 
 def apply_mask(image, mask):
+    """Apply a binary mask to the image."""
     mask = (mask > 0.5).astype(np.uint8) * 255
     masked_image = cv2.bitwise_and(image, image, mask=mask)
     return masked_image
 
 def mcts_generate_colors(base_colors, n_new_colors, n_iterations=1000, variation_range=60):
+    """Generate new colors using Monte Carlo Tree Search."""
     best_new_colors = []
     for _ in range(n_new_colors):
         best_color = None
@@ -38,9 +46,11 @@ def mcts_generate_colors(base_colors, n_new_colors, n_iterations=1000, variation
     return np.array(best_new_colors)
 
 def rgb_to_hex(rgb):
+    """Convert RGB to HEX color."""
     return '#{:02x}{:02x}{:02x}'.format(rgb[0], rgb[1], rgb[2])
 
 def plot_extended_palette(image, n_colors=5, n_new_colors=3):
+    """Generate and return an extended color palette from the image."""
     image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     pixels = image_rgb.reshape(-1, 3)
     mask = (pixels.sum(axis=1) != 0)
@@ -52,12 +62,9 @@ def plot_extended_palette(image, n_colors=5, n_new_colors=3):
     new_colors = mcts_generate_colors(colors, n_new_colors=n_new_colors)
     all_colors = np.vstack((colors, new_colors))
 
-    hex_palette = [rgb_to_hex(color) for color in all_colors]
-    return hex_palette
+    return [rgb_to_hex(color) for color in all_colors]
 
-app = Flask(__name__)
-
-@app.route('/process-image', methods=['POST'])
+@app.route('/api/process-image', methods=['POST'])
 def process_image():
     try:
         if 'image' not in request.files:
@@ -74,7 +81,6 @@ def process_image():
         original_image = np.array(image.resize((image_size, image_size)))
 
         focal_object = apply_mask(original_image, predicted_mask)
-
         extended_palette = plot_extended_palette(focal_object, n_colors=5, n_new_colors=3)
 
         return jsonify({
@@ -86,5 +92,3 @@ def process_image():
 
 if __name__ == '__main__':
     app.run(port=5150, debug=True)
-
-# curl -X POST http://127.0.0.1:5150/process-image -F "image=@C:/Users/smart/Downloads/GP_Materials/testimage1"

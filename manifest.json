@@ -11,8 +11,7 @@
   ],
   "ui": "ui.html",
   "networkAccess": {
-    "allowedDomains": [
-      "none"
-    ]
+    "allowedDomains": ["*"],
+    "reasoning": "The plugin requires access to all domains for fetching necessary resources."
   }
 }
