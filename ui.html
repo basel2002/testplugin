@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Create Color Palette</title>
+    <style>
+      body {
+        background-color: #1e1e2f;
+        color: white;
+        font-family: Arial, sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+      }
+
+      #container {
+        text-align: center;
+      }
+
+      h1 {
+        margin-bottom: 30px;
+        font-size: 24px;
+      }
+
+      button {
+        background-color: #ff4081;
+        color: white;
+        border: none;
+        padding: 15px 30px;
+        font-size: 16px;
+        border-radius: 8px;
+        cursor: pointer;
+        margin: 10px;
+        transition: background-color 0.3s ease;
+      }
+
+      button:hover {
+        background-color: #e73370;
+      }
+
+      input[type="file"] {
+        display: none;
+      }
+
+      label {
+        background-color: #ff4081;
+        color: white;
+        border: none;
+        padding: 15px 30px;
+        font-size: 16px;
+        border-radius: 8px;
+        cursor: pointer;
+        margin: 10px;
+        transition: background-color 0.3s ease;
+        display: inline-block;
+      }
+
+      label:hover {
+        background-color: #e73370;
+      }
+
+      #result {
+        margin-top: 20px;
+        font-size: 18px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <h1>Create a Color Palette</h1>
+      <label for="file-upload">Choose Image</label>
+      <input type="file" id="file-upload" accept="image/*" />
+      <button id="create-palette">Create Color Palette</button>
+      <div id="result"></div>
+    </div>
+
+    <script>
+      let selectedFile = null;
+
+      // Handle file input change
+      document.getElementById('file-upload').onchange = (event) => {
+        const file = event.target.files[0];
+        if (file) {
+          selectedFile  = file;
+          console.log(selectedFile);
+          document.getElementById('result').innerText = 'Image Selected: ' + file.name;
+        }
+      };
+
+      // Handle "Create Color Palette" button click
+      document.getElementById('create-palette').onclick = () => {
+        if (selectedFile) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            parent.postMessage({ pluginMessage: { type: 'create-palette', data: reader.result } }, '*');
+          };
+          reader.readAsDataURL(selectedFile);
+        } else {
+          document.getElementById('result').innerText = 'Please select an image first.';
+        }
+      };
+
+      // Handle messages from the plugin code
+      window.onmessage = (event) => {
+        const message = event.data.pluginMessage;
+        if (message.type === 'model-result') {
+          document.getElementById('result').innerText = 'Color Palette: ' + message.data.join(', ');
+        } else if (message.type === 'error') {
+          document.getElementById('result').innerText = 'Error: ' + message.message;
+        }
+      };
+    </script>
+  </body>
+</html>
